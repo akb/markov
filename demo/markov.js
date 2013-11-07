@@ -149,6 +149,19 @@
       return this.state = this.state.process(entity);
     };
 
+    MarkovChain.prototype.predict = function() {
+      var prediction, state;
+      prediction = [];
+      state = this.state;
+      if (!state.entity) {
+        return;
+      }
+      while (state = state.next()) {
+        prediction.push(state.entity);
+      }
+      return prediction;
+    };
+
     return MarkovChain;
 
   })();

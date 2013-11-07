@@ -2,7 +2,7 @@ class MarkovPrediction
   constructor: ->
     @markov = new MarkovChain
     $("#input").keyup(@handleKeyup.bind(this))
-    #$('#input').change(@handleChange.bind(this))
+    $('#input').change(@handleChange.bind(this))
 
   handleKeyup: (event) ->
     entity = String.fromCharCode(event.keyCode)
@@ -13,10 +13,6 @@ class MarkovPrediction
     $textarea = $(event.target)
 
   predict: ->
-    remainingWord = ''
-    state = @markov.state
-    while state = state.next()
-      remainingWord = remainingWord.concat(state.entity) 
-    $('#prediction').html(remainingWord)
+    $('#prediction').html(@markov.predict()?.join(''))
 
 window.MarkovPrediction = MarkovPrediction

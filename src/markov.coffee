@@ -61,6 +61,13 @@ class MarkovChain
     return @reset() if entity in RESET_ENTITYS
     @state = @state.process(entity)
 
+  predict: ->
+    prediction = []
+    state = @state
+    return unless state.entity
+    prediction.push(state.entity) while state = state.next()
+    return prediction
+
 window.State = State
 window.Transition = Transition
 window.MarkovChain = MarkovChain

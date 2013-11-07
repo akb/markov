@@ -6,6 +6,7 @@
     function MarkovPrediction() {
       this.markov = new MarkovChain;
       $("#input").keyup(this.handleKeyup.bind(this));
+      $('#input').change(this.handleChange.bind(this));
     }
 
     MarkovPrediction.prototype.handleKeyup = function(event) {
@@ -21,13 +22,8 @@
     };
 
     MarkovPrediction.prototype.predict = function() {
-      var remainingWord, state;
-      remainingWord = '';
-      state = this.markov.state;
-      while (state = state.next()) {
-        remainingWord = remainingWord.concat(state.entity);
-      }
-      return $('#prediction').html(remainingWord);
+      var _ref;
+      return $('#prediction').html((_ref = this.markov.predict()) != null ? _ref.join('') : void 0);
     };
 
     return MarkovPrediction;
