@@ -14,11 +14,17 @@ class State
     transition.strength += 1
     transition.head
 
-  next: ->
+  nextStrongest: ->
     transitions = @transitions.strongest()
     return unless transitions.length
     return transitions[0].head if transitions.length is 1
     return transitions[Math.floor(Math.random() * transitions.length)].head
+
+  next: ->
+    roll = Math.random()
+    count = 0.0
+    probabilities = @probabilities()
+    @transitions[i].head for p, i in probabilities when (count += p) >= roll
 
 class Transition
   constructor: (options={}) ->
@@ -30,14 +36,19 @@ class Transition.Set
   constructor: (transitions) ->
     @transitions = transitions || []
 
+  get: (i) -> @tansitions[i]
+
+  sum: -> (t.strength for t in @transitions).reduce(((s, v) -> s + v), 0)
+
+  probabilities: ->
+    sum = @sum()
+    strength / sum for t in @transitions
+
   find: (entity) ->
     t for i, t of @transitions when t.head.entity is entity
 
   append: (transition) ->
     @transitions.push(transition)
-
-  each: (callback, context) ->
-    callback.call(context || this, t) for t in @transitions
 
   maxStrength: ->
     max = 0
