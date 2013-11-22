@@ -1,14 +1,16 @@
-RESET_ENTITYS   = ['\n', ' ', "'", '.', '"', ',', '!', ':', ';', '?', '/']
-IGNORED_ENTITYS = ['\n']
+RESET_ENTITIES   = [' ', "'", '.', '"', ',', '!', ':', ';', '?', '/']
+IGNORED_ENTITIES = ['\n']
+REWIND_ENTITIES  = ['\b']
 
 class State
   constructor: (options={}) ->
     @entity = options.entity || null
     @transitions = new Transition.Set(options.transitions)
+    @parent = options.parent
 
   process: (entity) ->
     unless transition = @transitions.find(entity)[0]
-      node = new State(entity:entity)
+      node = new State(entity:entity, parent:this)
       transition = new Transition(head:node, tail:this)
       @transitions.append(transition)
     transition.strength += 1
@@ -23,8 +25,13 @@ class State
   next: ->
     roll = Math.random()
     count = 0.0
-    probabilities = @probabilities()
-    @transitions[i].head for p, i in probabilities when (count += p) >= roll
+    for i, p in @transitions.probabilities()
+      return @transitions.get(i).head if (count += p) >= roll
+
+  previous: ->
+    transition = @parent.transitions.find (t) -> t.head is this
+    if (transition.strength -= 1) < 1
+      @parent.transitions.remove(transition)
 
 class Transition
   constructor: (options={}) ->
@@ -36,12 +43,17 @@ class Transition.Set
   constructor: (transitions) ->
     @transitions = transitions || []
 
-  get: (i) -> @tansitions[i]
+  get: (i) -> @transitions[i]
 
-  sum: -> (t.strength for t in @transitions).reduce(((s, v) -> s + v), 0)
+  sum: ->
+    console.log @transitions
+    sum = 0
+    sum += t.strength for t in @transitions
+    sum
 
   probabilities: ->
     sum = @sum()
+    console.log sum
     strength / sum for t in @transitions
 
   find: (entity) ->
@@ -59,6 +71,9 @@ class Transition.Set
     max = @maxStrength()
     t for t in @transitions when t.strength is max
 
+  remove: (transition) ->
+    delete @transitions[@transitions.indexOf(transition)]
+
 class MarkovChain
   constructor: (options={}) ->
     @nullstate = options.nullstate || new State
@@ -67,9 +82,13 @@ class MarkovChain
   reset: ->
     @state = @nullstate
 
+  rewind: ->
+    @state = @state.back()
+
   process: (entity) ->
-    return if entity in IGNORED_ENTITYS
-    return @reset() if entity in RESET_ENTITYS
+    return if entity in IGNORED_ENTITIES
+    return @reset() if entity in RESET_ENTITIES
+    return @rewind() if entity in REWIND_ENTITIES
     @state = @state.process(entity)
 
   predict: ->
@@ -79,6 +98,6 @@ class MarkovChain
     prediction.push(state.entity) while state = state.next()
     return prediction
 
-window.State = State
-window.Transition = Transition
+window.State       = State
+window.Transition  = Transition
 window.MarkovChain = MarkovChain
