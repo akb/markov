@@ -1,6 +1,6 @@
-RESET_ENTITIES   = [' ', "'", '.', '"', ',', '!', ':', ';', '?', '/']
-IGNORED_ENTITIES = ['\n']
-REWIND_ENTITIES  = ['\b']
+RESET_ENTITIES   = ['.', '!', ':', ';', '?', '\n']
+IGNORED_ENTITIES = [' ']
+#REWIND_ENTITIES  = ['\b']
 
 class State
   constructor: (options={}) ->
@@ -16,17 +16,7 @@ class State
     transition.strength += 1
     transition.head
 
-  nextStrongest: ->
-    transitions = @transitions.strongest()
-    return unless transitions.length
-    return transitions[0].head if transitions.length is 1
-    return transitions[Math.floor(Math.random() * transitions.length)].head
-
-  next: ->
-    roll = Math.random()
-    count = 0.0
-    for i, p in @transitions.probabilities()
-      return @transitions.get(i).head if (count += p) >= roll
+  next: -> @transitions.decide()
 
   previous: ->
     transition = @parent.transitions.find (t) -> t.head is this
@@ -46,15 +36,19 @@ class Transition.Set
   get: (i) -> @transitions[i]
 
   sum: ->
-    console.log @transitions
     sum = 0
     sum += t.strength for t in @transitions
     sum
 
   probabilities: ->
     sum = @sum()
-    console.log sum
-    strength / sum for t in @transitions
+    t.strength / sum for t in @transitions
+
+  decide: ->
+    roll = Math.random()
+    count = 0.0
+    for p, i in @probabilities()
+      return @get(i).head if (count += p) >= roll
 
   find: (entity) ->
     t for i, t of @transitions when t.head.entity is entity
@@ -88,16 +82,40 @@ class MarkovChain
   process: (entity) ->
     return if entity in IGNORED_ENTITIES
     return @reset() if entity in RESET_ENTITIES
-    return @rewind() if entity in REWIND_ENTITIES
+    #return @rewind() if entity in REWIND_ENTITIES
     @state = @state.process(entity)
 
   predict: ->
     prediction = []
-    state = @state
-    return unless state.entity
+    state = @nullstate
     prediction.push(state.entity) while state = state.next()
     return prediction
 
-window.State       = State
-window.Transition  = Transition
-window.MarkovChain = MarkovChain
+#window.State       = State
+#window.Transition  = Transition
+#window.MarkovChain = MarkovChain
+
+rl = require('readline').createInterface
+  input:    process.stdin
+  output:   process.stdout
+  terminal: false
+
+trie = new MarkovChain
+
+started = false
+queue = []
+
+start = ->
+  started = true
+  while queue.length
+    line = queue.shift()
+    trie.process(word) for word in line.split /\b/
+  started = false
+
+rl.on 'line', (line) ->
+  queue.push(line)
+  start() unless started
+
+rl.on 'close', -> generate()
+
+generate = -> console.log trie.predict().join(' ')
