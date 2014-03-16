@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
-coffee -c -o lib/ src/markov.coffee
+
+if [[ $1 == watch || $1 == w ]]; then
+  opts="-cwo"
+else
+  opts="-co"
+fi
+
+coffee $opts lib src

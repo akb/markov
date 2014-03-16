@@ -1,0 +1,25 @@
+{
+  "name": "markovjs",
+  "version": "0.0.1",
+  "description": "library for working with markov chains",
+  "main": "lib/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "prepublish": "./bin/build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/akb/markovjs.git"
+  },
+  "author": "akb <akb@akb.la>",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/akb/markovjs/issues"
+  },
+  "dependencies": {
+    "minimist": "0.0.8"
+  }
+}
