@@ -6,4 +6,6 @@ else
   opts="-co"
 fi
 
+mkdir -p lib
+
 coffee $opts lib src
