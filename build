@@ -1,4 +1,2 @@
 #!/usr/bin/env bash
 coffee -c -o lib/ src/markov.coffee
-coffee -c -o demo/ src/demo/predict.coffee
-cp lib/markov.js demo/markov.js

@@ -1,103 +1,113 @@
-RESET_ENTITIES   = [' ', "'", '.', '"', ',', '!', ':', ';', '?', '/']
-IGNORED_ENTITIES = ['\n']
-REWIND_ENTITIES  = ['\b']
+fs = require 'fs'
 
-class State
-  constructor: (options={}) ->
-    @entity = options.entity || null
-    @transitions = new Transition.Set(options.transitions)
-    @parent = options.parent
+class Markov
+  constructor: (options = {}) ->
+    @state = options.state || ' '
+    @transitions = []
+    if options.transitions?
+      @transitions.push(new Markov.Transition(t)) for t in options.transitions
 
-  process: (entity) ->
-    unless transition = @transitions.find(entity)[0]
-      node = new State(entity:entity, parent:this)
-      transition = new Transition(head:node, tail:this)
-      @transitions.append(transition)
-    transition.strength += 1
-    transition.head
+  transition: (state) ->
+    return unless state.match /[a-z' ]+/i
+    for t in @transitions when t.tailMatches(state) and t.headMatches(@state)
+      transition = t
+    unless transition?
+      transition = new Markov.Transition(@state, state)
+      @transitions.push(transition)
+    @state = transition.execute()
 
-  nextStrongest: ->
-    transitions = @transitions.strongest()
-    return unless transitions.length
-    return transitions[0].head if transitions.length is 1
-    return transitions[Math.floor(Math.random() * transitions.length)].head
+  reset: -> @state = ' '
 
-  next: ->
-    roll = Math.random()
-    count = 0.0
-    for i, p in @transitions.probabilities()
-      return @transitions.get(i).head if (count += p) >= roll
-
-  previous: ->
-    transition = @parent.transitions.find (t) -> t.head is this
-    if (transition.strength -= 1) < 1
-      @parent.transitions.remove(transition)
-
-class Transition
-  constructor: (options={}) ->
-    @tail     = options.tail     || null
-    @head     = options.head     || null
-    @strength = options.strength || 0
-
-class Transition.Set
-  constructor: (transitions) ->
-    @transitions = transitions || []
-
-  get: (i) -> @transitions[i]
-
-  sum: ->
-    console.log @transitions
-    sum = 0
-    sum += t.strength for t in @transitions
-    sum
-
-  probabilities: ->
-    sum = @sum()
-    console.log sum
-    strength / sum for t in @transitions
-
-  find: (entity) ->
-    t for i, t of @transitions when t.head.entity is entity
-
-  append: (transition) ->
-    @transitions.push(transition)
-
-  maxStrength: ->
-    max = 0
-    max = t.strength for t in @transitions when t.strength > max
-    max
-
-  strongest: ->
-    max = @maxStrength()
-    t for t in @transitions when t.strength is max
-
-  remove: (transition) ->
-    delete @transitions[@transitions.indexOf(transition)]
-
-class MarkovChain
-  constructor: (options={}) ->
-    @nullstate = options.nullstate || new State
-    @state     = options.state     || @nullstate
-
-  reset: ->
-    @state = @nullstate
-
-  rewind: ->
-    @state = @state.back()
-
-  process: (entity) ->
-    return if entity in IGNORED_ENTITIES
-    return @reset() if entity in RESET_ENTITIES
-    return @rewind() if entity in REWIND_ENTITIES
-    @state = @state.process(entity)
+  random: ->
+    @state = @transitions[Math.floor(Math.random() * @transitions.length)].tail
 
   predict: ->
-    prediction = []
-    state = @state
-    return unless state.entity
-    prediction.push(state.entity) while state = state.next()
-    return prediction
+    choices = (t for t in @transitions when t.head is @state)
+    return unless choices.length
+    sum = 0
+    sum += t.count for t in choices
+    random = Math.floor(Math.random() * sum)
+    for t in choices
+      random -= t.count
+      return @state = t.tail if random <= 0 
 
-window.State       = State
-window.Transition  = Transition
-window.MarkovChain = MarkovChain
+  generate: ->
+    buffer = ''
+    @random()
+    next = ''
+    next = @predict() until next.match(/\w+/)
+    buffer += next[0].toUpperCase() + next.slice(1)
+    while next
+      last = next
+      next = @predict()
+      buffer += ' ' unless next.match(/[',:;.!?\s]/) or last.match(/\s/)
+      buffer += next if next
+      break if next.match /[.!?]/
+    return buffer
+
+class Markov.Transition
+  constructor: (head, tail) ->
+    if arguments.length is 1
+      @tail = head.tail
+      @count = head.count
+      @head = head.head
+    else
+      @head = head
+      @tail = tail
+      @count = 0
+
+  headMatches: (state) ->
+    state.toLowerCase() is @head.toLowerCase()
+
+  tailMatches: (state) ->
+    state.toLowerCase() is @tail.toLowerCase()
+
+  execute: ->
+    @count++
+    @tail
+
+return unless process.argv
+
+markov = null
+
+seed = ->
+  try
+    fs.statSync('markov.json')
+    markov = new Markov(JSON.parse(fs.readFileSync('markov.json').toString()))
+    return console.log(markov.generate())
+  catch
+    markov = new Markov
+
+  buffer = ''
+  done = false
+
+  process.stdin.setEncoding('utf8')
+
+  process.stdin.on 'readable', ->
+    chunk = process.stdin.read()
+    return unless chunk?
+    buffer += chunk
+
+  process.stdin.on 'end', ->
+    buffer = buffer.split(/\b/)
+    for i in [0..buffer.length] #word, i in buffer
+      if buffer[i] is "'"
+        buffer[i-1] = buffer[i-1] + buffer[i] + buffer[i+1]
+        buffer.splice(i, 2)
+    done = true
+
+  timer = setInterval ->
+    if done and not buffer.length
+      clearInterval(timer)
+      fs.writeFileSync('markov.json', JSON.stringify(markov))
+      console.log markov.generate()
+    return unless buffer.length
+    char = buffer[0]
+    buffer = buffer.slice(1)
+    char = char.replace(/"/g, '')
+    char = char.replace(/\s+/g, ' ')
+    return if char is ' '
+    markov.transition(char)
+  , 0
+
+seed()
