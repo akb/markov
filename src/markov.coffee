@@ -1,29 +1,24 @@
 {Transition} = require './transition'
+{State} = require './state'
 
-class module.exports.Markov
+class Markov
   constructor: (options = {}) ->
-    @state = options.state or ' '
-    @transitions = []
-    if options.transitions?
-      @transitions.push(new Transition(t)) for t in options.transitions
+    @state = new State(options.state)
+    @transitions = new Transition.Collection(options.transitions)
 
   transition: (state) ->
-    return unless state.match /[a-z' ]+/i
-    for t in @transitions
-      if t.tailMatches(state) and t.headMatches(@state)
-        transition = t
-    unless transition?
-      transition = new Transition(@state, state)
-      @transitions.push(transition)
+    state = new State(state) unless state.valid?
+    return unless state.valid()
+    transition = @transitions.findOrCreate(@state, state)
     @state = transition.execute()
 
-  reset: -> @state = ' '
+  reset: -> @state = new State(' ')
 
   random: ->
-    @state = @transitions[Math.floor(Math.random() * @transitions.length)].tail
+    @state = @transitions.randomCapital().head
 
   predict: ->
-    choices = (t for t in @transitions when t.head is @state)
+    choices = @transitions.findMany(@state)
     return unless choices.length
     sum = 0
     sum += t.count for t in choices
@@ -33,15 +28,16 @@ class module.exports.Markov
       return @state = t.tail if random <= 0 
 
   generate: ->
-    buffer = ''
+    buffer = []
     @random()
-    next = ''
-    next = @predict() until next.match(/\w+/)
-    buffer += next[0].toUpperCase() + next.slice(1)
+    buffer.push(next = @state)
     while next
       last = next
       next = @predict()
-      buffer += ' ' unless next.match(/[',:;.!?\s]/) or last.match(/\s/)
-      buffer += next if next
+      unless next.match(/[',:;.!?\s]/) or last.match(/\s/)
+        buffer.push(new State(' '))
+      buffer.push(next) if next?
       break if next.match /[.!?]/
     return buffer
+
+module.exports.Markov = Markov

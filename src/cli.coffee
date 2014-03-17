@@ -5,14 +5,17 @@ fs = require 'fs'
 
 commands = {}
 
-commands.create = (inputfile) ->
+commands.emulate = (inputfile) ->
   try
     fs.statSync(inputfile)
     markov = new Markov(JSON.parse(fs.readFileSync(inputfile).toString()))
-    process.stdout.write(markov.generate() + '\n')
+    result = markov.generate()
+    result = (s.toString() for s in result)
+    process.stdout.write(result.join('') + '\n')
     process.exit(0)
-  catch
-    process.stderr.write("#{inputfile} does not exist\n")
+  catch e
+    #process.stderr.write("#{inputfile} does not exist\n")
+    throw e
     process.exit(1)
 
 commands.learn = ->
