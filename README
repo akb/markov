@@ -1,17 +1,17 @@
 Markov chains in CoffeeScript
 
 CLI:
-  bin/markov <subcommand>
+  markov <subcommand>
 
   subcommands:
     learn
       outputs a markov matrix in JSON format for text provided on STDIN
 
       e.g.
-        bin/markov learn < tmp/state_of_the_union.txt > tmp/obama.json
+        markov learn < tmp/state_of_the_union.txt > tmp/obama.json
 
     emulate
       generate a sentence using the specified markov matrix
 
       e.g.
-        bin/markov emulate tmp/obama.json
+        markov emulate tmp/obama.json
