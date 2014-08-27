@@ -5,7 +5,7 @@ CLI:
 
   subcommands:
     learn
-      outputs a markov matrix in JSON format for text provided on STDIN
+      outputs a markov model in JSON format for text provided on STDIN
 
       e.g.
         markov learn < tmp/state_of_the_union.txt > tmp/obama.json
